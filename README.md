@@ -90,7 +90,7 @@ alignpy.plot.plot(filename, objectname, pmax=97.5,z=10e-8,zoom=1)
 
 # Aligns two FITS files together and saves a new file. It only shifts the objects together over a specified 
 # amount of space.
-shift_save(filename1,filename2,pixelrange,outputfilename)
+alignpy.align.shift_save(filename1,filename2,pixelrange,outputfilename)
 
 # plots two FITS files together, either by adding, subtracting, dividing, or multiplying the two files. Aligns  
 # the two files automatically.
