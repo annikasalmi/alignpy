@@ -65,43 +65,35 @@ import os
 
 import aplpy
 
-# Returns all observations made of a specific astronomical
-# object within a specified radius.
+# Returns all observations made of a specific astronomical object within a specified radius.
 obsM81 = query_object(‘M81’,0.02)
 
-# Returns all the catalogs that contain observations of that
-# astronomical object.
+# Returns all the catalogs that contain observations of that astronomical object.
 
 obs_catalogs(obsM81)
 
-# Returns all the filters that the astronomical object has
-# been observed in.
+# Returns all the filters that the astronomical object has been observed in.
 
 obs_filters(obsM81)
 
-# downloads a FITS file onto the user’s computer. The user
-# searches for a specific astronomical object, and then can
-# optionally add a radius, filter, and catalog to download 
-# from. Defaults to optical images from HST with a 0.02 
-# radius around the object. 
+# downloads a FITS file onto the user’s computer. The user searches for a specific astronomical object, and then 
+# can optionally add a radius, filter, and catalog to download from. Defaults to optical images from HST with a 
+# 0.02 radius around the object. 
 
 alignpy.io.download_object_filter_catalog(‘M81’,0.02,’F606W’,’HST’)
 
-# plots a FITS file. Write in the object name for a label 
-# and also to find its RA and Dec online. User can manually
-# input the z; otherwise it will default to close by. The 
-# image can be presented as is or zoomed in further. pmax 
-# adjusts the scale of the final plotted image. Returns all 
-# the downloaded files, which include txt files.
+# plots a FITS file. Write in the object name for a label and also to find its RA and Dec online. User can 
+# manually input the z; otherwise it will default to close by. The image can be presented as is or zoomed 
+# in further. pmax  adjusts the scale of the final plotted image. Returns all the downloaded files, which 
+# include txt and other non-FITS files.
 alignpy.plot.plot(filename, objectname, pmax=97.5,z=10e-8,zoom=1)
 
-# Aligns two FITS files together and saves a new file. It only 
-# shifts the objects together over a specified amount of space.
+# Aligns two FITS files together and saves a new file. It only shifts the objects together over a specified 
+# amount of space.
 shift_save(filename1,filename2,pixelrange,outputfilename)
 
-# plots two FITS files together, either by adding, subtracting,
-# dividing, or multiplying the two files. Aligns the two files
-# automatically.
+# plots two FITS files together, either by adding, subtracting, dividing, or multiplying the two files. Aligns  
+# the two files automatically.
 alignpy.plot.combined_plot(filename1, filename2, objectname, method,pmax=97.5,z=10e-8,zoom=1)
 ```
 
