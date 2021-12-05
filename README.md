@@ -76,7 +76,7 @@ obs_catalogs(obsM81)
 
 obs_filters(obsM81)
 
-# downloads a FITS file onto the user’s computer. The user searches for a specific astronomical object, and then 
+# Downloads a FITS file onto the user’s computer. The user searches for a specific astronomical object, and then 
 # can optionally add a radius, filter, and catalog to download from. Defaults to optical images from HST with a 
 # 0.02 radius around the object. 
 
