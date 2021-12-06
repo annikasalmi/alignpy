@@ -97,9 +97,6 @@ alignpy.align.shift_save(filename1,filename2,pixelrange,outputfilename)
 alignpy.plot.combined_plot(filename1, filename2, objectname, method,pmax=97.5,z=10e-8,zoom=1)
 ```
 
-## Documentation
-Hosted on ReadTheDocs.
-
 ## Credits
 Thank you to Professor Marla Geha for suggesting the chi^2 function. Thank you to both Professor Marla Geha and Imad Pasha for reading over and suggesting comments to my code. Thank you to Professor Meg Urry and Mike Koss at STSci for inspiring me to create this package.
 
