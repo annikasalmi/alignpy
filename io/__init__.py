@@ -1,3 +1,1 @@
-from alignpy import *
-from .plotting import *
-from .io import *
+from . import *
