@@ -17,7 +17,12 @@ setuptools.setup(
         'numpy>=1.17',
         'scipy>=1',
         'astropy>=4'
-        'python>3'
+        'python>3',
+        'astroquery',
+        'json',
+        'requests',
+        'os',
+        'aplpy'
      ],
      classifiers=[
         "Programming Language :: Python :: 3",
