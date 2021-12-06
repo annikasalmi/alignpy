@@ -29,8 +29,6 @@ import os
 
 import aplpy
 
-from alignpy import *
-
 def plot(filename, objectname, pmax=97.5,z=10e-8,zoom=1):
     '''
     Plots an astronomical image both zoomed in and zoomed out. The user can set how much to zoom in and also what scale to be zoomed in.
