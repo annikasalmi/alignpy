@@ -1,2 +1,1 @@
-from .histograms import *
-from .imaging import *
+from alignpy import *
