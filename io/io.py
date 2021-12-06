@@ -29,8 +29,6 @@ import os
 
 import aplpy
 
-from alignpy import *
-
 def gaia_align(fitspath,objname,radius = 6.0,minobj=2,sigma=5.0,threshold=5., conv_width=6):
     '''
     Aligns a given FITS file to the GAIA catalog. Doesn't return anything; just modifies the file.
