@@ -114,7 +114,7 @@ def combine(fitsfilter1,fitsfilter2,method):
         The location of the file to use as a second file to multiply.  
     '''
     # only run this once
-    if method != 'divide', 'add','subtract','multiply','mean':
+    if method != 'divide' & 'add'&'subtract'&'multiply'&'mean':
         print('Method specified does not exist.')
     
     if os.path.isfile(fitsfilter2.split('.')[0]+method+'_combined_image.fits') is False:
