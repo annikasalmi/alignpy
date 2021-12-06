@@ -29,8 +29,6 @@ import os
 
 import aplpy
 
-from alignpy import *
-
 def counts_to_flux(fitspath):
     '''
     Turns image counts into flux values. Doesn't return anything; instead just modifies the file
