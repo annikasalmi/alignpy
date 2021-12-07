@@ -33,7 +33,7 @@ import aplpy
 # from project
 from search import *
 from align import *
-from inputoutput import *
+from plotting import *
 
 def gaia_align(fitspath,objname,radius = 6.0,minobj=2,sigma=5.0,threshold=5., conv_width=6):
     '''
