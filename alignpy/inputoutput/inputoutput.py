@@ -1,3 +1,4 @@
+# third party
 import numpy as np
 
 import scipy
@@ -18,8 +19,8 @@ from astroquery.gaia import Gaia
 from astroquery.mast import Observations
 from astroquery.sdss import SDSS
 
-#import drizzlepac
-#from drizzlepac import tweakreg
+import drizzlepac
+from drizzlepac import tweakreg
 
 import json, requests
 
@@ -28,6 +29,11 @@ from reproject import reproject_interp
 import os
 
 import aplpy
+
+# from project
+from search import *
+from align import *
+from inputoutput import *
 
 def gaia_align(fitspath,objname,radius = 6.0,minobj=2,sigma=5.0,threshold=5., conv_width=6):
     '''
