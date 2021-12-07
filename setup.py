@@ -9,7 +9,7 @@ setuptools.setup(
     author_email='annika.salmi@yale.edu',
     packages=find_packages(where="src"),
     package_dir={"": "src"},
-    package_data={"alignpy": ["data/*.pkl", "data/*.txt"]},
+    package_data={"alignpy": ["aligpny/*"]},
     install_requires=["numpy","scipy"],
     include_package_data=True,
     url='https://github.com/StarAlignment/alignpy',
