@@ -59,8 +59,7 @@ def counts_to_flux(fitspath):
     magab = -2.5*np.log10(data)+zpab
     data = magab * 606 * 10**9 / (2.9979 * 10**8)
     image.data = data
-    
-    warnings.filterwarnings("ignore")    
+
     pass
 
 def reproject(fitsfilter1,fitsfilter2,extfilter1,extfilter2,reproject_name):
@@ -90,9 +89,9 @@ def reproject(fitsfilter1,fitsfilter2,extfilter1,extfilter2,reproject_name):
     reproject_path: string
         Returns the path location of the reprojected FITS file.
     '''
-    filter1hdu = fits.open(fitsfilter1, ignore_missing_end=True)
+    filter1hdu = fits.open(fitsfilter1)
     filter1image=filter1hdu[extfilter1] # can't use my fxn because i need the 'sci' and 'wht' keywords
-    filter2hdu = fits.open(fitsfilter2, ignore_missing_end=True)
+    filter2hdu = fits.open(fitsfilter2)
     filter2image=filter2hdu[extfilter2]
     
     if '.' in reproject_name:
@@ -164,15 +163,15 @@ def reproject_error(fitsfilter1,fitsfilter2,reproject_name):
     reproject_path: string
         Returns the path location of the reprojected FITS file.
     '''
-    if 'WHT' in np.asarray(fits.open(fitsfilter2).info(), ignore_missing_end=True):
+    if 'WHT' in np.asarray(fits.open(fitsfilter2).info()):
         # adjust weights to errors
         reproject_err_path = reproject(fitsfilter1,fitsfilter2,'WHT','SCI',reproject_name)
-        image = fits.open(reproject_name, ignore_missing_end=True)[0]
+        image = fits.open(reproject_name)[0]
         data = 1/image.data
         image.data = data
         return reproject_err_path
         
-    if 'ERR' in np.asarray(fits.open(fitsfilter1, ignore_missing_end=True).info()):
+    if 'ERR' in np.asarray(fits.open(fitsfilter1).info()):
         reproject_err_path = reproject(fitsfilter1,fitsfilter2,'ERR','SCI',reproject_name)
         return reproject_err_path
 
@@ -213,19 +212,19 @@ def shift_images(fitsfilter1,fitsfilter2,pixelrange):
     
     # figure out the extensions
     # can't use my function since can't close files till later
-    hdu_comparison = fits.open(fitsfilter1, ignore_missing_end=True)
+    hdu_comparison = fits.open(fitsfilter1)
     image_comparison = hdu_comparison[0]
     if type(image_comparison.data) != np.ndarray:
         image_comparison = hdu_comparison[1]
         
-    hdu_shift = fits.open(reproject_path, ignore_missing_end=True)
+    hdu_shift = fits.open(reproject_path)
     image_shift = hdu_shift[0]
     if type(image_shift.data) != np.ndarray:
         image_shift = hdu_shift[1]
     
     # if error path exists, check extensions 
     if reproject_err_path is not None:
-        hdu_err = fits.open(reproject_err_path, ignore_missing_end=True)
+        hdu_err = fits.open(reproject_err_path)
         err = hdu_err[0]
         if type(err.data) != np.ndarray:
             err = hdu_err[1]      
@@ -318,13 +317,13 @@ def shift_save(fitsfilter1,fitsfilter2,pixelrange,outputfilename):
         hdu = fits.PrimaryHDU(data=output_arr)
         hdu.writeto(outputfilename)
 
-        output = fits.open(outputfilename,mode='update', ignore_missing_end=True)
+        output = fits.open(outputfilename,mode='update')
 
-        image_shift = fits.open(fitsfilter1, ignore_missing_end=True)[0]
+        image_shift = fits.open(fitsfilter1)[0]
         if type(image_shift.data) != np.ndarray:
-            image_shift = fits.open(fitsfilter1, ignore_missing_end=True)[1]
+            image_shift = fits.open(fitsfilter1)[1]
 
-        hdu = fits.open(fitsfilter1, ignore_missing_end=True)
+        hdu = fits.open(fitsfilter1)
         image = hdu[0]
         if type(image.data) != np.ndarray:
             image = hdu[1]
@@ -338,4 +337,3 @@ def shift_save(fitsfilter1,fitsfilter2,pixelrange,outputfilename):
 
         output.close()
         return outputfilename
-
