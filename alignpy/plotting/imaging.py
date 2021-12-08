@@ -86,7 +86,7 @@ def plot(filename, objectname, pmax=97.5,z=10e-8,zoom=1):
     
     f1.set_title(objectname,size=24, weight='heavy',color='black', loc='left',family='serif')
 
-    f1.add_label(0.05, 0.9, filtername, relative=True,size=20,
+    f1.add_label(0.05, 0.9, 'Filter: 'filtername, relative=True,size=20,
                  weight='heavy',color='red', horizontalalignment='left',family='serif')
 
     f1.show_colorscale(pmin=0,pmax=pmax,cmap='gray')#,stretch='arcsinh')
