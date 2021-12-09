@@ -35,6 +35,109 @@ from search import *
 from plotting import *
 from inputoutput import *
 
+# ---------------------------------------------------------------------------------------------------
+# ALIGN TO EXTERNAL CATALOGS 
+# ---------------------------------------------------------------------------------------------------
+
+def gaia_align(fitspath,objname,radius = 6.0,minobj=2,sigma=5.0,threshold=5., conv_width=6):
+    '''
+    Aligns a given FITS file to the GAIA catalog. Doesn't return anything; just modifies the file.
+    To be used only if a FITS file doesn't appear to have WCS or the WCS seems very off.
+    
+    Parameters
+    ----------
+    fitspath: string
+        The location of a specific FITS file.
+        
+    objname: string
+        An astronomical object we are aligning an image towards in the GAIA catalog.
+        
+    radius: string
+        The radius in arcseconds that we will search around the given object.
+        
+    minobj: integer
+        The minimum number of objects that need to be found in order for the FITS file to be aligned with the GAIA catalog.
+    
+    sigma: float
+        The allowed error for the alignment process.
+        
+    threshold: float
+        The minimum threshold for finding matchign objects.
+        
+    conv_width: int
+        The minimum convergence width for finding objects.
+    '''
+    # TweakReg from STSci but I wrote the rest of this function
+    coord = resolve(objname)
+    radius = Quantity(radius, u.arcmin)
+    coord = SkyCoord(ra=coord[0], dec=coord[1], unit=(u.deg, u.deg))
+    gaia_query = Gaia.query_object_async(coordinate=coord, radius=radius)
+    
+    reduced_query = gaia_query['ra', 'dec', 'phot_g_mean_mag']
+    reduced_query.write('gaia.cat', format='ascii.commented_header')
+    
+
+    cw = 3.5  # Set to two times the FWHM of the PSF.
+    wcsname = 'Gaia'  # Specify the WCS name for this alignment
+
+    # ALIGNING TO GAIA
+    if os.path.isdir('gaia.cat'): #rewrite gaia.cat if necessary
+        refcat = None
+    refcat = 'gaia.cat'
+    
+    tweakreg.TweakReg(fitspath,  # Pass input images
+                      updatehdr=True,  # update header with new WCS solution
+                      imagefindcfg={'threshold':threshold,'conv_width':conv_width},  # Detection parameters
+                                                                     # threshold varies for different data
+                      refcat=refcat,  # Use user supplied catalog (Gaia)
+                      interactive=False,
+                      see2dplot=False,
+                      minobj = minobj,
+                      shiftfile=True,  # Save out shift file (so we can look at shifts later)      
+                      wcsname=wcsname,  # Give our WCS a new name
+                      reusename=True,
+                      sigma=sigma,
+                      ylimit=0.2,
+                      fitgeometry='general')  # Use the 6 parameter fit  
+    pass
+    
+def gaia_filealign(fitsfilter1, fitsfilter2, minobj=2):
+    '''
+    Aligns a given FITS file with another fits file. Doesn't return anything; just modifies the file.
+    Preferably the chi2_images function should be used over this one.
+    
+    Parameters
+    ----------
+    fitsfilter1: string
+        The location of the FITS file that will be compared against.
+        
+    fitsfilter2: string
+        The location of the FITS file that will be shifted.
+        
+    minobj: integer
+        The minimum number of objects that need to be found in order for the FITS file to be aligned with the GAIA catalog.
+    '''
+    tweakreg.TweakReg(fitsfilter2,
+                      enforce_user_order=False,
+                      imagefindcfg={'threshold': 10, 'conv_width': 3.5, 'dqbits': ~4096},
+                      minobj = minobj,
+                      refimage=fitsfilter1, 
+                      refimagefindcfg={'threshold': 10, 'conv_width': 2.5},
+                      shiftfile=True,
+                      outshifts='shift657_flc.txt',
+                      searchrad=5.0,
+                      ylimit=0.6,
+                      updatehdr=True,
+                      #updatewcs=True,
+                      wcsname='UVIS_FLC',
+                      reusename=True,
+                      interactive=False)
+    pass
+
+# ---------------------------------------------------------------------------------------------------
+# CHANGE FILE VALUES FROM FLUX TO COUNT 
+# ---------------------------------------------------------------------------------------------------
+
 def counts_to_flux(fitspath):
     '''
     Turns image counts into flux values. Doesn't return anything; instead just modifies the file
@@ -44,24 +147,37 @@ def counts_to_flux(fitspath):
     fitspath: FITS file
         The fits file that needs to be converted to flux values.
     '''
-    # ADD HAS ATTRIBUTE WHEN I TURN INTO A CLASS SO IT ONLY RUNS ONCE
-    image = open_fits(fitspath,mode='update')
-    try: 
-        photflam=image.header['PHOTFLAM']
-    except: 
-        photflam=2.901E-19
-    try: 
-        photplam=image.header['PHOTPLAM']
-    except: 
-        photplam=16030.43
-    data = image.data
-    zpab = -2.5*np.log10(photflam)-5*np.log10(photplam)-2.408
-    magab = -2.5*np.log10(data)+zpab
-    data = magab * 606 * 10**9 / (2.9979 * 10**8)
-    image.data = data
+    image, hdu = search.open_fits(fitspath,mode='update')
+    
+    try: # make sure I only change the counts to flux once for each file
+        # I'm not sure how to do this without try/except, since header['PHOTFLAM'] is not a local var, global var, or an attribute
+        if image.header.comments['PHOTFLAM'] == 'Counts changed to flux':
+            pass
+    except:
+        try: 
+            photflam=image.header['PHOTFLAM'] # if the photflam value is present, use that; otherwise use a set value
+            image.header['PHOTFLAM'] = image.header['PHOTFLAM'],'Counts changed to flux'
+        except: 
+            photflam=2.901E-19
+            image.header.append('PHOTFLAM',2.901E-19,'Counts changed to flux')
+        try: 
+            photplam=image.header['PHOTPLAM'] # if the photplam value is present, use that; otherwise use a set value
+        except: 
+            photplam=16030.43
+        data = image.data
+        zpab = -2.5*np.log10(photflam)-5*np.log10(photplam)-2.408
+        magab = -2.5*np.log10(data)+zpab
+        data = magab * 606 * 10**9 / (2.9979 * 10**8)
+        image.data = data # change data values of the file 
+        
+        hdu.close()
 
-    pass
+        pass
 
+# ---------------------------------------------------------------------------------------------------
+# REPROJECT FILES TO MATCH EACH OTHER
+# ---------------------------------------------------------------------------------------------------
+    
 def reproject(fitsfilter1,fitsfilter2,extfilter1,extfilter2,reproject_name):
     '''
     Reproject two FITS images so that the smaller image is on the same pixel scale as the larger image.
@@ -89,12 +205,11 @@ def reproject(fitsfilter1,fitsfilter2,extfilter1,extfilter2,reproject_name):
     reproject_path: string
         Returns the path location of the reprojected FITS file.
     '''
-    filter1hdu = fits.open(fitsfilter1)
-    filter1image=filter1hdu[extfilter1] # can't use my fxn because i need the 'sci' and 'wht' keywords
-    filter2hdu = fits.open(fitsfilter2)
-    filter2image=filter2hdu[extfilter2]
+    filter1image, filter1hdu = search.open_fits(fitsfilter1,ext=extfilter1) 
+    filter2image, filter2hdu = search.open_fits(fitsfilter2,ext=extfilter2)
     
-    if '.' in reproject_name:
+    # check that the user properly named the reproject file to include .fits
+    if '.fits' in reproject_name:
         reproject_path = reproject_name
         
     else:
@@ -137,7 +252,6 @@ def reproject_science(fitsfilter1,fitsfilter2,reproject_name):
     reproject_path: string
         Returns the path location of the reprojected FITS file.
     '''
-    
     reproject_path = reproject(fitsfilter1,fitsfilter2,'SCI','SCI',reproject_name)
     return reproject_path
 
@@ -163,12 +277,13 @@ def reproject_error(fitsfilter1,fitsfilter2,reproject_name):
     reproject_path: string
         Returns the path location of the reprojected FITS file.
     '''
-    if 'WHT' in np.asarray(fits.open(fitsfilter2).info()):
+    if 'WHT' in np.asarray(fits.open(fitsfilter2).info()): # can't use open_fits because need the info extension
         # adjust weights to errors
         reproject_err_path = reproject(fitsfilter1,fitsfilter2,'WHT','SCI',reproject_name)
-        image = fits.open(reproject_name)[0]
+        image,hdu = search.open_fits(reproject_name)
         data = 1/image.data
         image.data = data
+        hdu.close
         return reproject_err_path
         
     if 'ERR' in np.asarray(fits.open(fitsfilter1).info()):
@@ -178,6 +293,10 @@ def reproject_error(fitsfilter1,fitsfilter2,reproject_name):
     else:
         print('No error file present')
         return None
+    
+# ---------------------------------------------------------------------------------------------------
+# SHIFT FILES TO MATCH EACH OTHER
+# ---------------------------------------------------------------------------------------------------
     
 def shift_images(fitsfilter1,fitsfilter2,pixelrange):
     '''
@@ -212,22 +331,13 @@ def shift_images(fitsfilter1,fitsfilter2,pixelrange):
     
     # figure out the extensions
     # can't use my function since can't close files till later
-    hdu_comparison = fits.open(fitsfilter1)
-    image_comparison = hdu_comparison[0]
-    if type(image_comparison.data) != np.ndarray:
-        image_comparison = hdu_comparison[1]
-        
-    hdu_shift = fits.open(reproject_path)
-    image_shift = hdu_shift[0]
-    if type(image_shift.data) != np.ndarray:
-        image_shift = hdu_shift[1]
+    image_comparison, hdu_comparison = search.open_fits(fitsfilter1)
+    
+    image_shift, hdu_shift = search.open_fits(reproject_path)
     
     # if error path exists, check extensions 
     if reproject_err_path is not None:
-        hdu_err = fits.open(reproject_err_path)
-        err = hdu_err[0]
-        if type(err.data) != np.ndarray:
-            err = hdu_err[1]      
+        image_err, hdu_err = search.open_fits(reproject_err_path)
     else: # if no error path exists just set err to None
         err = None
     
@@ -251,7 +361,8 @@ def shift_images(fitsfilter1,fitsfilter2,pixelrange):
             image_xyshift[:,pixel_grid[j]] = np.mean(image_xshift.data)
             
             # CALCULATE CHI2
-            subtraction = np.abs(image_comparison.data - image_xyshift) # need absolute value otherwise adding it all up doesn't make sense as negatives cancel each other
+            subtraction = np.abs(image_comparison.data - image_xyshift) # need absolute value 
+                                                                        # otherwise adding it all up doesn't make sense as negatives cancel each other
             flux_sum = np.sum(subtraction)
 
             if err is not None:
@@ -302,7 +413,7 @@ def shift_save(fitsfilter1,fitsfilter2,pixelrange,outputfilename):
     outputfilename: string
         What to name the new FITS file.
     '''
-    if '.' in outputfilename:
+    if '.fits' in outputfilename:
         outputfilename = outputfilename
         
     else:
@@ -319,16 +430,7 @@ def shift_save(fitsfilter1,fitsfilter2,pixelrange,outputfilename):
 
         output = fits.open(outputfilename,mode='update')
 
-        image_shift = fits.open(fitsfilter1)[0]
-        if type(image_shift.data) != np.ndarray:
-            image_shift = fits.open(fitsfilter1)[1]
-
-        hdu = fits.open(fitsfilter1)
-        image = hdu[0]
-        if type(image.data) != np.ndarray:
-            image = hdu[1]
-        elif type(image.data) != np.ndarray:
-            print('Cannot open FITS file',fitsfilter1,'with extension 1 or 0')
+        image, hdu = search.open_fits(fitsfilter1)
             
         w = WCS(image.header)
 
@@ -336,4 +438,5 @@ def shift_save(fitsfilter1,fitsfilter2,pixelrange,outputfilename):
         output[0].header.update(w.to_header())
 
         output.close()
+        hdu.close()
         return outputfilename
