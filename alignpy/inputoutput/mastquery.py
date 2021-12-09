@@ -35,104 +35,14 @@ from search import *
 from align import *
 from plotting import *
 
-def gaia_align(fitspath,objname,radius = 6.0,minobj=2,sigma=5.0,threshold=5., conv_width=6):
-    '''
-    Aligns a given FITS file to the GAIA catalog. Doesn't return anything; just modifies the file.
-    To be used only if a FITS file doesn't appear to have WCS or the WCS seems very off.
-    
-    Parameters
-    ----------
-    fitspath: string
-        The location of a specific FITS file.
-        
-    objname: string
-        An astronomical object we are aligning an image towards in the GAIA catalog.
-        
-    radius: string
-        The radius in arcseconds that we will search around the given object.
-        
-    minobj: integer
-        The minimum number of objects that need to be found in order for the FITS file to be aligned with the GAIA catalog.
-    
-    sigma: float
-        The allowed error for the alignment process.
-        
-    threshold: float
-        The minimum threshold for finding matchign objects.
-        
-    conv_width: int
-        The minimum convergence width for finding objects.
-    '''
-    coord = resolve(objname)
-    radius = Quantity(radius, u.arcmin)
-    coord = SkyCoord(ra=coord[0], dec=coord[1], unit=(u.deg, u.deg))
-    gaia_query = Gaia.query_object_async(coordinate=coord, radius=radius)
-    
-    reduced_query = gaia_query['ra', 'dec', 'phot_g_mean_mag']
-    reduced_query.write('gaia.cat', format='ascii.commented_header')
-    
-
-    cw = 3.5  # Set to two times the FWHM of the PSF.
-    wcsname = 'Gaia'  # Specify the WCS name for this alignment
-
-    # ALIGNING TO GAIA
-    if os.path.isdir('gaia.cat'): #rewrite gaia.cat if necessary
-        refcat = None
-    refcat = 'gaia.cat'
-    
-    # I got TweakReg from STSci but I wrote the rest of this function
-    tweakreg.TweakReg(fitspath,  # Pass input images
-                      updatehdr=True,  # update header with new WCS solution
-                      imagefindcfg={'threshold':threshold,'conv_width':conv_width},  # Detection parameters
-                                                                     # threshold varies for different data
-                      refcat=refcat,  # Use user supplied catalog (Gaia)
-                      interactive=False,
-                      see2dplot=False,
-                      minobj = minobj,
-                      shiftfile=True,  # Save out shift file (so we can look at shifts later)      
-                      wcsname=wcsname,  # Give our WCS a new name
-                      reusename=True,
-                      sigma=sigma,
-                      ylimit=0.2,
-                      fitgeometry='general')  # Use the 6 parameter fit  
-    pass
-    
-def gaia_filealign(fitsfilter1, fitsfilter2, minobj=2):
-    '''
-    Aligns a given FITS file with another fits file. Doesn't return anything; just modifies the file.
-    Preferably the chi2_images function should be used over this one.
-    
-    Parameters
-    ----------
-    fitsfilter1: string
-        The location of the FITS file that will be compared against.
-        
-    fitsfilter2: string
-        The location of the FITS file that will be shifted.
-        
-    minobj: integer
-        The minimum number of objects that need to be found in order for the FITS file to be aligned with the GAIA catalog.
-    '''
-    tweakreg.TweakReg(fitsfilter2,
-                      enforce_user_order=False,
-                      imagefindcfg={'threshold': 10, 'conv_width': 3.5, 'dqbits': ~4096},
-                      minobj = minobj,
-                      refimage=fitsfilter1, 
-                      refimagefindcfg={'threshold': 10, 'conv_width': 2.5},
-                      shiftfile=True,
-                      outshifts='shift657_flc.txt',
-                      searchrad=5.0,
-                      ylimit=0.6,
-                      updatehdr=True,
-                      #updatewcs=True,
-                      wcsname='UVIS_FLC',
-                      reusename=True,
-                      interactive=False)
-    pass
+# ---------------------------------------------------------------------------------------------------
+# FIND THE OBJECT ON MAST
+# ---------------------------------------------------------------------------------------------------
 
 def query_object(name, radius, **kwargs):
     '''
-    Queries an object within a specified catalog and creates an astroquery Catalogs object. Uses the query_object method from astroquery.
+    Queries an object within a specified catalog and creates an astroquery Catalogs object. 
+    Uses the query_object method from astroquery.
     
     Parameters
     ----------
@@ -152,17 +62,16 @@ def query_object(name, radius, **kwargs):
     '''
     radius_string = str(radius) + " deg" # this is the format required for some reason
     
-    obs = Observations.query_object(objectname=name,radius=radius_string,**kwargs)
+    obs = Observations.query_object(objectname=name,radius=radius_string,**kwargs) # from astroquery package
     
-    obs_df = obs.to_pandas()
-        
-    # else:
-    #     obs = Observations.query_object(objectname=name,radius=radius_string,**kwargs)
-    #     obs = obs.loc[(obs['obs_collection'] == catalog)]
+    obs_df = obs.to_pandas() # easier to work with pandas df then astropy table
         
     print("Number of results:",len(obs))
     return obs_df
 
+# ---------------------------------------------------------------------------------------------------
+# INSPECT THE OBSERVATION DATAFRAME
+# ---------------------------------------------------------------------------------------------------
 
 def obs_filters(observation):
     '''
@@ -178,11 +87,8 @@ def obs_filters(observation):
     numpy array
         Returns an array of the possible existing filters.
     '''
-    #return np.unique(np.asarray(observation['filters']))
     return np.unique(np.asarray(observation.filters.values).astype(np.dtype(str)))
 
-
-# Determine what catalogs exist for a specific observation
 def obs_catalogs(observation):
     '''
     Determine what catalogs exist for a dataframe of observations for a specific astronomical object.
@@ -219,6 +125,7 @@ def obs_table_filter_catalog(obs, filtername,catalog):
     astropy Table
         A list of observations at only one specific filter for one catalog.
     '''
+    # check that both the filter and catalog exist simultaneously for a certain object
     if filtername not in obs_filters(obs):
         return 'No observations were made of this object in that filter.'
         
@@ -231,6 +138,10 @@ def obs_table_filter_catalog(obs, filtername,catalog):
     else:
         return obs.loc[(obs.filters==filtername)&(obs.obs_collection==catalog)]
 
+# ---------------------------------------------------------------------------------------------------
+# DOWNLOAD FITS FILES
+# ---------------------------------------------------------------------------------------------------
+    
 def download_products(obsID,download_dir=None,download_later = False):
     '''
     Download FITS files of a given observation onto the user's computer.
@@ -253,7 +164,7 @@ def download_products(obsID,download_dir=None,download_later = False):
     if type(obsID) != str: # in case a user assumed it was a float
         obsID = 'obsID'
         
-    return Observations.download_products(obsID,download_dir,curl_flag=download_later)
+    return Observations.download_products(obsID,download_dir,curl_flag=download_later) # from astroquery package
 
 def download_object_filter_catalog(name,radius=0.02,filtername='F606W',catalog='HST',obsIndex=0,download_dir = None,download_later=False):
     '''
