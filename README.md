@@ -1,4 +1,4 @@
-# Project Title
+# alignpy
 
 Welcome to **alignpy**! This project is intended to download FITS files of specific astronomical objects, specified by filter and catalog, onto your computer. Once they are downloaded, the files can be aligned together and plotted.
 
