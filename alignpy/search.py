@@ -1,3 +1,35 @@
+# third party
+import numpy as np
+
+import scipy
+from scipy.ndimage.interpolation import shift
+
+import matplotlib.pyplot as plt
+
+import astropy
+import astropy.io.fits as fits
+from astropy.cosmology import FlatLambdaCDM, Planck15
+import astropy.units as u
+from astropy.units import Quantity
+from astropy.wcs import WCS
+from astropy.coordinates import SkyCoord
+
+import astroquery
+from astroquery.gaia import Gaia
+from astroquery.mast import Observations
+from astroquery.sdss import SDSS
+
+#import drizzlepac
+#from drizzlepac import tweakreg
+
+import json, requests
+
+from reproject import reproject_interp
+
+import os
+
+import aplpy
+
 # these are functions that all three of the modules require
 # ---------------------------------------------------------------------------------------------------
 # OPEN FITS FILES
@@ -65,7 +97,7 @@ def mastQuery(request, url='https://mast.stsci.edu/api/v0/invoke'):
     r.raise_for_status()
     return r.text
 
-def resolve(name):
+def resolve(name,radius):
     '''
     Get the RA and Dec for an object using the MAST name resolver.
     
@@ -73,6 +105,8 @@ def resolve(name):
     ----------
     name: string
         Name of object
+    radius: Boolean
+        Whether or not to return the radius of an object
 
     Returns
     -------
@@ -80,6 +114,8 @@ def resolve(name):
         RA position
     objDec: float
         Dec position
+    objRadius: float
+        radius position
     '''
 
     resolverRequest = {'service':'Mast.Name.Lookup',
@@ -91,10 +127,18 @@ def resolve(name):
     resolvedObject = json.loads(resolvedObjectString)
     # The resolver returns a variety of information about the resolved object, 
     # however for our purposes all we need are the RA, Dec, and radius
-    try:
-        objRa = resolvedObject['resolvedCoordinate'][0]['ra']
-        objDec = resolvedObject['resolvedCoordinate'][0]['decl']
-        objRadius = resolvedObject['resolvedCoordinate'][0]['radius']
-    except IndexError as e:
-        raise ValueError("Unknown object '{}'".format(name))
-    return objRa, objDec, objRadius
+    if radius is not True:
+        try:
+            objRa = resolvedObject['resolvedCoordinate'][0]['ra']
+            objDec = resolvedObject['resolvedCoordinate'][0]['decl']
+        except IndexError as e:
+            raise ValueError("Unknown object '{}'".format(name))
+        return objRa, objDec
+    if radius == True:
+        try:
+            objRa = resolvedObject['resolvedCoordinate'][0]['ra']
+            objDec = resolvedObject['resolvedCoordinate'][0]['decl']
+            objRadius = resolvedObject['resolvedCoordinate'][0]['radius']
+        except IndexError as e:
+            raise ValueError("Unknown object '{}'".format(name))
+        return objRa, objDec, objRadius
