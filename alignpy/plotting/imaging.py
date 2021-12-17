@@ -19,8 +19,8 @@ from astroquery.gaia import Gaia
 from astroquery.mast import Observations
 from astroquery.sdss import SDSS
 
-import drizzlepac
-from drizzlepac import tweakreg
+#import drizzlepac
+#from drizzlepac import tweakreg
 
 import json, requests
 
@@ -30,7 +30,7 @@ import os
 
 import aplpy
 
-# from project
+# internal imports
 from search import *
 from align import *
 from inputoutput import *
@@ -86,6 +86,7 @@ def combine(fitsfilter1,fitsfilter2,method):
                 
             if method == 'divide':
                 image_array = image1.data/image2.data
+                image_array = np.nan_to_num(image_array)
                 
             if method == 'mean':
                 image_array = (image1.data+image2.data)/2
@@ -115,7 +116,7 @@ def combine(fitsfilter1,fitsfilter2,method):
 # PLOTTING OPTIONS
 # ---------------------------------------------------------------------------------------------------
 
-def plot(filename, objectname, pmax=97.5,z=10e-8,zoom=1): 
+def plot(filename, objectname, pmax=97.5,z=10e-8,zoom=1,radiussearch=True): 
     '''
     Plots an astronomical image both zoomed in and zoomed out. 
     The user can set how much to zoom in and also what scale to be zoomed in.
@@ -136,11 +137,18 @@ def plot(filename, objectname, pmax=97.5,z=10e-8,zoom=1):
     
     zoom: float
         The amount to zoom in on the image. Default is 1.
+    
+    radius: Boolean or float
+        If True, search for radius. If False, set radius to a specific amount.
     '''
     chi2align.counts_to_flux(filename)  # this only runs if counts haven't been changed to flux already
                                         # change this here as oppposed to elsewhere so the colorbar value is in fluxes
     hdu = fits.open(filename) # can't use search.open_fits because ['FILTER'] header could be not with the image array
-    ra,dec,radius = resolve(objectname)
+    if radiussearch is True:
+        ra,dec,radius = resolve(objectname)
+    if radiussearch is not True:
+        ra,dec = resolve(objectname,radius=False)
+        radius = radiussearch
     
     hdr = hdu[0].header
    
@@ -200,7 +208,7 @@ def plot(filename, objectname, pmax=97.5,z=10e-8,zoom=1):
     f1.colorbar.set_axis_label_font(family='serif',size=15)
     pass
     
-def combined_plot(fitsfilter1,fitsfilter2, objectname, method = None, pmax=97.5,z=10e-8,zoom=1):
+def combined_plot(fitsfilter1,fitsfilter2, objectname, method = None, pmax=97.5,z=10e-8,zoom=1,radiussearch=True):
     '''
     Plots an astronomical image both zoomed in and zoomed out. 
     The user can set how much to zoom in and also what scale to be zoomed in.
@@ -233,7 +241,11 @@ def combined_plot(fitsfilter1,fitsfilter2, objectname, method = None, pmax=97.5,
     asecperkpc=cosmo.arcsec_per_kpc_comoving(z).value # find arcseconds per kpc
     
     # determine size of the object as well as its location
-    ra,dec,radius = search.resolve(objectname)
+    if radiussearch is True:
+        ra,dec,radius = resolve(objectname)
+    if radiussearch is not True:
+        ra,dec = resolve(objectname,radius=radiussearch)
+        radius = radiussearch
     
     fileresult = combine(fitsfilter1,fitsfilter2,method)
     f1 = aplpy.FITSFigure(fileresult, hdu=0, north=True, figure=fig)
