@@ -19,8 +19,8 @@ from astroquery.gaia import Gaia
 from astroquery.mast import Observations
 from astroquery.sdss import SDSS
 
-import drizzlepac
-from drizzlepac import tweakreg
+#import drizzlepac
+#from drizzlepac import tweakreg
 
 import json, requests
 
@@ -30,7 +30,7 @@ import os
 
 import aplpy
 
-# from project
+# internal
 from search import *
 from align import *
 from plotting import *
@@ -127,13 +127,16 @@ def obs_table_filter_catalog(obs, filtername,catalog):
     '''
     # check that both the filter and catalog exist simultaneously for a certain object
     if filtername not in obs_filters(obs):
-        return 'No observations were made of this object in that filter.'
-        
+        print('No observations were made of this object in that filter.')
+        return None
+    
     if catalog not in obs_catalogs(obs):
-        return 'No observations were made of this object in that catalog.'
+        print('No observations were made of this object in that catalog.')
+        return None
 
     if catalog not in obs_catalogs(obs.loc[(obs.filters==filtername)]):
-        return 'No observations were made in this catalog of that filter.'
+        print('No observations were made in this catalog of that filter.')
+        return None
     
     else:
         return obs.loc[(obs.filters==filtername)&(obs.obs_collection==catalog)]
@@ -203,14 +206,19 @@ def download_object_filter_catalog(name,radius=0.02,filtername='F606W',catalog='
     obs = query_object(name,radius)
     obs_filtered = obs_table_filter_catalog(obs, filtername, catalog)
     
-    if len(obs_filtered[obs_filtered.t_exptime > 500]) > 0:
-        obs_exptime = obs_filtered[obs_filtered.t_exptime > 500] # choosing longer exposures
-    else:
-        obs_exptime = obs_filtered # only if it exists
+    if obs_filtered is None:
+        print('No observations were made in this catalog of that filter.')
+        return None
     
-    if len(obs_exptime.loc[obs_exptime.target_name == name]) > 0: # choosing the observations that are explicitly of that object if they exist
-        obs_final = obs_exptime.loc[obs_exptime.target_name == name]
     else:
-        obs_final = obs_exptime
-    
-    return download_products(obs_filtered.obsid[obs_filtered.index[obsIndex]],download_dir,download_later)
+        if len(obs_filtered[obs_filtered.t_exptime > 500]) > 0:
+            obs_exptime = obs_filtered[obs_filtered.t_exptime > 500] # choosing longer exposures
+        else:
+            obs_exptime = obs_filtered # only if it exists
+
+        if len(obs_exptime.loc[obs_exptime.target_name == name]) > 0: # choosing the observations that are explicitly of that object if they exist
+            obs_final = obs_exptime.loc[obs_exptime.target_name == name]
+        else:
+            obs_final = obs_exptime
+
+        return download_products(obs_filtered.obsid[obs_filtered.index[obsIndex]],download_dir,download_later)
