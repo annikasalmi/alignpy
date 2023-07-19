@@ -74,7 +74,7 @@ def open_fits(fitspath,mode='readonly',ext=None):
 # DETERMINE PROPERTIES OF A GIVEN ASTRONOMICAL OBJECT
 # ---------------------------------------------------------------------------------------------------
 
-def mastQuery(request, url='https://mast.stsci.edu/api/v0/invoke'):
+def mast_query(request, url='https://mast.stsci.edu/api/v0/invoke'):
     '''
     Perform a MAST query for an astronomical object.
 
